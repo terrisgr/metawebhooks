@@ -230,7 +230,7 @@ func handleGreetingRequest(w http.ResponseWriter, r *http.Request) {
 func handleGreeting(recipientIDStr string) {
 	token = os.Getenv("VERIFICATION_TOKEN")
 	// keybox
-	err = sendImageTemplate(recipientIDStr, token, "kebox_image", "https://i.postimg.cc/x8w7Drdy/4.jpg")
+	err := sendImageTemplate(recipientIDStr, token, "kebox_image", "https://i.postimg.cc/x8w7Drdy/4.jpg")
 	if err != nil {
 		fmt.Println("Error sending image message:", err)
 	}
