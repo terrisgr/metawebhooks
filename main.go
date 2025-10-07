@@ -229,10 +229,6 @@ func handleGreetingRequest(w http.ResponseWriter, r *http.Request) {
 
 func handleGreeting(recipientIDStr string) {
 	token = os.Getenv("VERIFICATION_TOKEN")
-	err := sendWhatsAppImageMessage(token, recipientIDStr, "https://i.postimg.cc/59PLsmpv/Whats-App-Image-2025-10-04-at-12-44-28.jpg")
-	if err != nil {
-		fmt.Println("Error sending image message:", err)
-	}
 	// keybox
 	err = sendImageTemplate(recipientIDStr, token, "kebox_image", "https://i.postimg.cc/x8w7Drdy/4.jpg")
 	if err != nil {
@@ -243,10 +239,10 @@ func handleGreeting(recipientIDStr string) {
 	if err != nil {
 		fmt.Println("Error sending template message:", err)
 	}
-	/*err = sendWhatsAppTemplateMessage(token, "35799495077", "faq", "en")
+	err = sendWhatsAppTemplateMessage(token, recipientIDStr, "welcome_athens_new", "en")
 	if err != nil {
 		fmt.Println("Error sending template message:", err)
-	}*/
+	}
 }
 
 func sendWhatsAppImageMessage(accessToken, recipient, imageURL string) error {
