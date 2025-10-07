@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -20,6 +19,15 @@ type TemplateMessage struct {
 		Language struct {
 			Code string `json:"code"`
 		} `json:"language"`
+		Components []struct { // Add this
+			Type       string `json:"type"`
+			Parameters []struct {
+				Type  string `json:"type"`
+				Image struct {
+					Link string `json:"link,omitempty"`
+				} `json:"image,omitempty"`
+			} `json:"parameters,omitempty"`
+		} `json:"components,omitempty"`
 	} `json:"template"`
 }
 
@@ -131,14 +139,14 @@ func handlePostWebhook(w http.ResponseWriter, r *http.Request, cache *Cache) {
 										timestamp := statusMap["timestamp"]
 										// convert recipientID to string
 										recipientIDStr, _ := recipientID.(string)
-										if status == "failed" || status =="delivered" {
+										if status == "failed" || status == "delivered" {
 											continue
 										}
 										// Check cache to avoid duplicate logs
 										if _, found := cache.Get(recipientIDStr); !found {
 											cache.Set(recipientIDStr, true, time.Hour*24) // cache for 24 hours
 											handleGreeting(recipientIDStr)
-											time.Sleep(1 * time.Second)
+											time.Sleep(1 * time.Second) // slight delay to avoid rate limits
 										}
 
 										log.Printf("Message status: %v | Recipient ID: %v | Timestamp: %v\n",
@@ -221,15 +229,17 @@ func handleGreetingRequest(w http.ResponseWriter, r *http.Request) {
 
 func handleGreeting(recipientIDStr string) {
 	token = os.Getenv("VERIFICATION_TOKEN")
-	err := sendWhatsAppImageMessage(token, recipientIDStr, "https://i.postimg.cc/rpMBwL9F/3.png")
+	err := sendWhatsAppImageMessage(token, recipientIDStr, "https://i.postimg.cc/59PLsmpv/Whats-App-Image-2025-10-04-at-12-44-28.jpg")
 	if err != nil {
 		fmt.Println("Error sending image message:", err)
 	}
-	err = sendWhatsAppImageMessage(token, recipientIDStr, "https://i.postimg.cc/x8w7Drdy/4.jpg")
+	// keybox
+	err = sendImageTemplate(recipientIDStr, token, "kebox_image", "https://i.postimg.cc/x8w7Drdy/4.jpg")
 	if err != nil {
 		fmt.Println("Error sending image message:", err)
 	}
-	err = sendWhatsAppTemplateMessage(token, recipientIDStr, "welcome_athens_new", "en")
+	// how to send code
+	err = sendImageTemplate(recipientIDStr, token, "image_template", "https://i.postimg.cc/rpMBwL9F/3.png")
 	if err != nil {
 		fmt.Println("Error sending template message:", err)
 	}
@@ -284,6 +294,76 @@ func sendWhatsAppImageMessage(accessToken, recipient, imageURL string) error {
 func handleHealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Server is healthy"))
+}
+
+func sendImageTemplate(toNumber, token, templateName, imageURL string) error {
+	phoneNumberID := "776012848931729"
+	msg := TemplateMessage{
+		MessagingProduct: "whatsapp",
+		To:               toNumber,
+		Type:             "template",
+	}
+	msg.Template.Name = templateName
+	msg.Template.Language.Code = "en"
+
+	// Add image header component
+	msg.Template.Components = []struct {
+		Type       string `json:"type"`
+		Parameters []struct {
+			Type  string `json:"type"`
+			Image struct {
+				Link string `json:"link,omitempty"`
+			} `json:"image,omitempty"`
+		} `json:"parameters,omitempty"`
+	}{
+		{
+			Type: "header",
+			Parameters: []struct {
+				Type  string `json:"type"`
+				Image struct {
+					Link string `json:"link,omitempty"`
+				} `json:"image,omitempty"`
+			}{
+				{
+					Type: "image",
+					Image: struct {
+						Link string `json:"link,omitempty"`
+					}{
+						Link: imageURL,
+					},
+				},
+			},
+		},
+	}
+
+	// Marshal payload
+	payload, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("failed to marshal payload: %v", err)
+	}
+
+	// Make request
+	url := fmt.Sprintf("https://graph.facebook.com/v20.0/%s/messages", phoneNumberID)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("request failed with status: %s", resp.Status)
+	}
+
+	fmt.Println("Message sent successfully!")
+	return nil
 }
 
 func main() {
