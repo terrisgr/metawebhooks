@@ -1,3 +1,4 @@
+
 package main
 
 import (
@@ -7,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 type TemplateMessage struct {
@@ -46,7 +48,7 @@ func handleGetWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 // POST /webhooks - for receiving events
-func handlePostWebhook(w http.ResponseWriter, r *http.Request) {
+func handlePostWebhook(w http.ResponseWriter, r *http.Request, cache *Cache) {
 	var event WebhookEvent
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -119,6 +121,30 @@ func handlePostWebhook(w http.ResponseWriter, r *http.Request) {
 									}
 								}
 							}
+
+							// --- Handle SENT / DELIVERED / READ events ---
+							if statuses, ok := value["statuses"].([]any); ok {
+								for _, s := range statuses {
+									if statusMap, ok := s.(map[string]any); ok {
+										status := statusMap["status"]
+										recipientID := statusMap["recipient_id"]
+										timestamp := statusMap["timestamp"]
+										// convert recipientID to string
+										recipientIDStr, _ := recipientID.(string)
+										if status == "failed" {
+											continue
+										}
+										// Check cache to avoid duplicate logs
+										if _, found := cache.Get(recipientIDStr); !found {
+											cache.Set(recipientIDStr, true, time.Hour*24) // cache for 24 hours
+											handleGreeting(recipientIDStr)
+										}
+
+										log.Printf("Message status: %v | Recipient ID: %v | Timestamp: %v\n",
+											status, recipientID, timestamp)
+									}
+								}
+							}
 						}
 					}
 				}
@@ -187,29 +213,29 @@ func handleGreetingRequest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	handleGreeting()
+	handleGreeting("919891594807")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Greeting messages sent"))
 }
 
-func handleGreeting() {
+func handleGreeting(recipientIDStr string) {
 	token = os.Getenv("VERIFICATION_TOKEN")
-	err := sendWhatsAppImageMessage(token, "35799495077", "https://i.postimg.cc/59PLsmpv/Whats-App-Image-2025-10-04-at-12-44-28.jpg")
+	err := sendWhatsAppImageMessage(token, recipientIDStr, "https://i.postimg.cc/59PLsmpv/Whats-App-Image-2025-10-04-at-12-44-28.jpg")
 	if err != nil {
 		fmt.Println("Error sending image message:", err)
 	}
-	err = sendWhatsAppImageMessage(token, "35799495077", "https://i.ibb.co/TMWDBndN/Whats-App-Image-2025-10-04-at-12-44-28-1.jpg")
+	err = sendWhatsAppImageMessage(token, recipientIDStr, "https://i.ibb.co/TMWDBndN/Whats-App-Image-2025-10-04-at-12-44-28-1.jpg")
 	if err != nil {
 		fmt.Println("Error sending image message:", err)
 	}
-	err = sendWhatsAppTemplateMessage(token, "35799495077", "welcome_athens_new", "en")
+	err = sendWhatsAppTemplateMessage(token, recipientIDStr, "welcome_athens_new", "en")
 	if err != nil {
 		fmt.Println("Error sending template message:", err)
 	}
-	err = sendWhatsAppTemplateMessage(token, "35799495077", "faq", "en")
+	/*err = sendWhatsAppTemplateMessage(token, "35799495077", "faq", "en")
 	if err != nil {
 		fmt.Println("Error sending template message:", err)
-	}
+	}*/
 }
 
 func sendWhatsAppImageMessage(accessToken, recipient, imageURL string) error {
@@ -260,12 +286,14 @@ func handleHealthCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	cache := New()
+
 	http.HandleFunc("/webhooks", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			handleGetWebhook(w, r)
 		case http.MethodPost:
-			handlePostWebhook(w, r)
+			handlePostWebhook(w, r, cache)
 		case http.MethodDelete:
 			handleGreetingRequest(w, r)
 		case http.MethodHead:
