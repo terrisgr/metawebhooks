@@ -131,7 +131,7 @@ func handlePostWebhook(w http.ResponseWriter, r *http.Request, cache *Cache) {
 										timestamp := statusMap["timestamp"]
 										// convert recipientID to string
 										recipientIDStr, _ := recipientID.(string)
-										if status == "failed" {
+										if status == "failed" || status =="delivered" {
 											continue
 										}
 										// Check cache to avoid duplicate logs
