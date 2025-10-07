@@ -138,6 +138,7 @@ func handlePostWebhook(w http.ResponseWriter, r *http.Request, cache *Cache) {
 										if _, found := cache.Get(recipientIDStr); !found {
 											cache.Set(recipientIDStr, true, time.Hour*24) // cache for 24 hours
 											handleGreeting(recipientIDStr)
+											time.Sleep(1 * time.Second)
 										}
 
 										log.Printf("Message status: %v | Recipient ID: %v | Timestamp: %v\n",
@@ -220,11 +221,11 @@ func handleGreetingRequest(w http.ResponseWriter, r *http.Request) {
 
 func handleGreeting(recipientIDStr string) {
 	token = os.Getenv("VERIFICATION_TOKEN")
-	err := sendWhatsAppImageMessage(token, recipientIDStr, "https://i.postimg.cc/59PLsmpv/Whats-App-Image-2025-10-04-at-12-44-28.jpg")
+	err := sendWhatsAppImageMessage(token, recipientIDStr, "https://i.postimg.cc/rpMBwL9F/3.png")
 	if err != nil {
 		fmt.Println("Error sending image message:", err)
 	}
-	err = sendWhatsAppImageMessage(token, recipientIDStr, "https://i.postimg.cc/43xh9H8H/Whats-App-Image-2025-10-04-at-12-44-28-1.jpg")
+	err = sendWhatsAppImageMessage(token, recipientIDStr, "https://i.postimg.cc/x8w7Drdy/4.jpg")
 	if err != nil {
 		fmt.Println("Error sending image message:", err)
 	}
