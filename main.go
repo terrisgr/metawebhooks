@@ -224,7 +224,7 @@ func handleGreeting(recipientIDStr string) {
 	if err != nil {
 		fmt.Println("Error sending image message:", err)
 	}
-	err = sendWhatsAppImageMessage(token, recipientIDStr, "https://i.ibb.co/TMWDBndN/Whats-App-Image-2025-10-04-at-12-44-28-1.jpg")
+	err = sendWhatsAppImageMessage(token, recipientIDStr, "https://i.postimg.cc/43xh9H8H/Whats-App-Image-2025-10-04-at-12-44-28-1.jpg")
 	if err != nil {
 		fmt.Println("Error sending image message:", err)
 	}
